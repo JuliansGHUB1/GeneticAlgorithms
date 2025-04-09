@@ -15,13 +15,34 @@ class NurseSchedulingProblem:
         self.nurses = ['A', 'B', 'C', 'D', 'E'] # We enumerate each nurse with a letter
         self.schedule_length = 160  # length of a single individual's schedule/availability
         self.availability = { # A mapping from each nurse to their availability, which at the moment is randomly generated
-            nurse: self.generate_availability() # Notice that currently we have 5 nurses, and for each the availability is randomly gen.
+            nurse: self.generate_block_availability() # Notice that currently we have 5 nurses, and for each the availability is randomly gen.
             for nurse in self.nurses
         }
 
     # A function that generates a random string of length schedule_length (160) to represent an individual nurses availability
     def generate_availability(self): 
         return ''.join(str(random.randint(0, 1)) for _ in range(self.schedule_length))
+
+    # A function that generates a random string of schedule length = 160 but using the idea that peoples time is more in a 
+    # block fashion where they are either busy or free for blocks [1,4] hours
+    # Generates one single nurses's availability for the entire week in a 15 minute encoding
+    def generate_block_availability(self):
+
+        producedString = 0 # The amount of the string you've produced thus far
+
+        availabilityString = ""
+        while(producedString < self.schedule_length):
+            block_length = random.randint(1,4) # The standard block of time people are free/busy for is on [1,4] hours
+            block_availability = random.randint(0, 1) # Now that we have the length of the block, we need whether they are free or not
+            number_bits_to_add = block_length * 4 # converts the block in hours to 15 minute increments as our string encoding is in 15 minute increments
+            availabilityString += (str(block_availability) * number_bits_to_add)
+            producedString = len(availabilityString)
+        
+        availabilityString = availabilityString[:160]  ## in case you overfilled
+        return availabilityString
+
+
+
     
     def getCost(self, scheduleDict):
         sumHardConstraints = self.getNumAvailabilityViolations(scheduleDict) # Add to hc violations the number of availability violations (schedule when unavailable)
@@ -32,7 +53,7 @@ class NurseSchedulingProblem:
         
         sumSoftConstraints = 0 # Currently no soft constraints yet
 
-        return 10 * sumHardConstraints + lessThanHourLongShiftPenalty
+        return 5  * sumHardConstraints + lessThanHourLongShiftPenalty # 10 is too conservative, 0 not conservative enough
 
     # Function takes each nurse's schedule in valueset of scheduleDict and compares to the nurse's availability string
     # and counts the total number of times a nurse is scheduled when she is unavailable

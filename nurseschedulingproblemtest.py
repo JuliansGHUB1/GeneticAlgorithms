@@ -21,5 +21,9 @@ class TestStreakFunction(unittest.TestCase):
     def test_edge_case_continuing_streak_not_violation(self):
         self.assertEqual(self.scheduler.penalize_non_streaks("0001110101011", len("0001110101011")), 4)
 
+    def test_generate_block_availability(self):
+        self.assertEqual(len(self.scheduler.generate_block_availability()), 160)
+        print("Availability string: " + self.scheduler.generate_block_availability())
+
 if __name__ == '__main__':
     unittest.main()
