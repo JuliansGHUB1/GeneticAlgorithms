@@ -16,7 +16,7 @@ import elitism
 INDIVIDUAL_SIZE = 800
 
 # problem constants:
-HARD_CONSTRAINT_PENALTY = 10  # the penalty factor for a hard-constraint violation
+HARD_CONSTRAINT_PENALTY = 1   # the penalty factor for a hard-constraint violation
 
 # Genetic Algorithm constants:
 POPULATION_SIZE = 300
@@ -50,11 +50,20 @@ toolbox.register("individualCreator", tools.initRepeat, creator.Individual, tool
 toolbox.register("populationCreator", tools.initRepeat, list, toolbox.individualCreator)
 
 
+# Obtains the cost of a candidate solution. A candidate solution is the concatenation of nurses
+# schedules, where the first 160 bits is Nurse A's schedule, the next 160 bits is nurse B's schedule and so on
+# for the entire 800 length schedule which is for 5 nurses. The cost of a candidate solution is higher when
+# it violates more constraints and lower when it violates less constraints, so it is a sort of measure of 
+# fitness from the perspective of the evolutionary algorithm.
 def getCost(individual):
     scheduleDict = {}
     bits_per_nurse = nsp.schedule_length
-    for idx, nurse in enumerate(nsp.nurses):
-        start = idx * bits_per_nurse
+    # For each nurse, first obtain her individual schedule from the candidate solution (concat. of all nurses schedules)
+    # For example, for nurse A, get the substring [0, 159] for nurse B [160, 319] and so on
+    # For each nurse-schedule pair add it to a map to get <nurse, schedule> mapping
+    # getCost of this candidate schedule
+    for idx, nurse in enumerate(nsp.nurses): # (nurses is an array of Nurses where each index is an identifier for a nurse - "A", "B", etc.)
+        start = idx * bits_per_nurse 
         end = start + bits_per_nurse
         bitstring = ''.join(str(b) for b in individual[start:end])
         scheduleDict[nurse] = bitstring
