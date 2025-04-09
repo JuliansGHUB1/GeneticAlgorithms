@@ -26,12 +26,13 @@ class NurseSchedulingProblem:
     def getCost(self, scheduleDict):
         sumHardConstraints = self.getNumAvailabilityViolations(scheduleDict) # Add to hc violations the number of availability violations (schedule when unavailable)
         
+        lessThanHourLongShiftPenalty = 0
         for schedule in scheduleDict.values(): 
-            sumHardConstraints += self.penalize_non_streaks(schedule, len(schedule)) # Add to hc violations the number of shifts < 1 hour long
+            lessThanHourLongShiftPenalty += self.penalize_non_streaks(schedule, len(schedule)) # Add to hc violations the number of shifts < 1 hour long
         
         sumSoftConstraints = 0 # Currently no soft constraints yet
 
-        return self.hardConstraintPenalty * sumHardConstraints + sumSoftConstraints
+        return 10 * sumHardConstraints + lessThanHourLongShiftPenalty
 
     # Function takes each nurse's schedule in valueset of scheduleDict and compares to the nurse's availability string
     # and counts the total number of times a nurse is scheduled when she is unavailable
@@ -56,7 +57,8 @@ class NurseSchedulingProblem:
         # known as the hardConstraintPenalty
         return totalCost
 
-    # Takes a string of length n and then counts the number of occurences of runs of 1s of length less than 4
+    # Takes a string of length n and then for each occurence of a run of 1's less than 4, it will sum the penalization function
+    # applied on each such occurence
     # Use case: Given a schedule we want to penalize less than 4 consecutive 1's,
     # as in a scheduling's encoding scheme less than 4 consecutive 1's means a shift less than 1 hour,
     # which violates a hard constraint. Algorithm identifies each run of 1's and checks if its less than 4 and increments count if it is
@@ -77,10 +79,7 @@ class NurseSchedulingProblem:
                         isViolation = lengthOfStreak < minConsecutiveBits
                         if(isViolation):
                             distanceToNoStreak = lengthOfStreak # we can correct this by removing all the 1s
-                            distanceToMinimalStreakLength = minConsecutiveBits - lengthOfStreak
-                            # Penalize runs that are very far from the minimum streak length and also very far from all 1s being removed
-                            # because these strings will be hard to evolve into states that are 'acceptable'
-                            violationCount = violationCount + min(distanceToNoStreak, distanceToMinimalStreakLength)
+                            violationCount = violationCount + (minConsecutiveBits - lengthOfStreak) ** 2
             
                     break ## Whether or not if we are inStreak is true, we have completely exhausted the string searching for runs of 4 consecutive 1s, so break
 
@@ -94,11 +93,46 @@ class NurseSchedulingProblem:
                 lengthOfStreak = ptr2 - ptr1
                 isViolation = lengthOfStreak < minConsecutiveBits
                 if(isViolation):
-                    distanceToNoStreak = lengthOfStreak # we can correct this by removing all the 1s
-                    distanceToMinimalStreakLength = minConsecutiveBits - lengthOfStreak
-                    # Penalize runs that are very far from the minimum streak length and also very far from all 1s being removed
-                    # because these strings will be hard to evolve into states that are 'acceptable'
-                    violationCount = violationCount + min(distanceToNoStreak, distanceToMinimalStreakLength)
+                     violationCount = violationCount + (minConsecutiveBits - lengthOfStreak) ** 2
+                
+                inStreak = False # we are no longer in a streak
+            
+            ptr2 = ptr2 + 1 # Increment iteration variable
+        return violationCount
+    
+    # Takes a string of length n and then counts the number of occurences of runs of 1s of length less than 4
+    # Useful for contextualizing the results of a run of the algorithm, because you can see the true number of violations
+    def number_of_incomplete_streaks(self, schedule, n):
+        n = len(schedule)
+        ptr1 = 0 # Demarcates the start of windows of streaks
+        ptr2 = 0 # Is an iteration variable
+        inStreak = False; # Boolean to represent whether we are in a streak or not
+        violationCount = 0 # Number of times in a individual persons schedule that they are scheduled for less than an hour (4 15 minute increments)
+        minConsecutiveBits = 4 # At minimum you must be scheduled for an hour - 4 15 minute increments
+        while(ptr2 <= n):
+            # Only 3 cases to consider: at x = n - 1, in a streak that continues as A[n-1] = 1 ; in a streak that ends as A[n-1] = 0;
+            # in a streak that starts at n - 1. In the middle case the streak length will be calculated in iteration where p = n-1
+            # However, in the other two cases we must have one extra iteration to get streak length
+            if(ptr2 == n): # Case for when a streak started at n - 1 or perhaps a streak continued from some [p1, n-1]
+                    if(inStreak):
+                        lengthOfStreak = n - ptr1
+                        isViolation = lengthOfStreak < minConsecutiveBits
+                        if(isViolation):
+                           violationCount = violationCount + 1
+            
+                    break ## Whether or not if we are inStreak is true, we have completely exhausted the string searching for runs of 4 consecutive 1s, so break
+
+            startNewStreak = (not inStreak) and schedule[ptr2] == "1"
+            endOfStreak = inStreak and schedule[ptr2] == "0"
+            if(startNewStreak):
+                ptr1 = ptr2 # this index is the start of a streak of 1s of at least length 1
+                inStreak = True # we are now in  a streak
+            elif(endOfStreak):
+                # Case where we had a run from [ptr1, ptr2) of 1s
+                lengthOfStreak = ptr2 - ptr1
+                isViolation = lengthOfStreak < minConsecutiveBits
+                if(isViolation):
+                     violationCount = violationCount + 1
                 
                 inStreak = False # we are no longer in a streak
             

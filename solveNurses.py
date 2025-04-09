@@ -118,6 +118,18 @@ def main():
     # Now print it properly
     nsp.printScheduleInfo(scheduleDict)
 
+    # Print its statistics
+    total_incomplete_streaks = 0
+    for nurse in nsp.nurses:
+        schedule = scheduleDict[nurse]
+        total_incomplete_streaks += nsp.number_of_incomplete_streaks(schedule, len(schedule))
+    
+    
+    print("Total incomplete streaks for 'best' individual we evolved:", total_incomplete_streaks)
+
+    availability_violations = nsp.getNumAvailabilityViolations(scheduleDict)
+    print("Total availability violations for best individual evolved:", availability_violations)
+
     # extract statistics:
     minFitnessValues, meanFitnessValues = logbook.select("min", "avg")
 
