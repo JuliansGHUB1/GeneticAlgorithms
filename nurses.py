@@ -32,7 +32,7 @@ class NurseSchedulingProblem:
 
         availabilityString = ""
         while(producedString < self.schedule_length):
-            block_length = random.randint(1,4) # The standard block of time people are free/busy for is on [1,4] hours
+            block_length = random.randint(1,8) # The standard block of time people are free/busy for is on [1,4] hours
             block_availability = random.randint(0, 1) # Now that we have the length of the block, we need whether they are free or not
             number_bits_to_add = block_length * 4 # converts the block in hours to 15 minute increments as our string encoding is in 15 minute increments
             availabilityString += (str(block_availability) * number_bits_to_add)
@@ -41,9 +41,11 @@ class NurseSchedulingProblem:
         availabilityString = availabilityString[:160]  ## in case you overfilled
         return availabilityString
 
-
-
     
+
+
+    # Computes the cost, most likely used to compute cost of the final schedule of the 5 nurses after running algorithm.
+    # In other words, scheduleDict is a map from nurse to schedule string of nurse
     def getCost(self, scheduleDict):
         sumHardConstraints = self.getNumAvailabilityViolations(scheduleDict) # Add to hc violations the number of availability violations (schedule when unavailable)
         
@@ -51,9 +53,22 @@ class NurseSchedulingProblem:
         for schedule in scheduleDict.values(): 
             lessThanHourLongShiftPenalty += self.penalize_non_streaks(schedule, len(schedule)) # Add to hc violations the number of shifts < 1 hour long
         
+        for schedule in scheduleDict.values():
+            numberOfZeroes = schedule.count("0")
+        
+        
+        
         sumSoftConstraints = 0 # Currently no soft constraints yet
 
-        return 5  * sumHardConstraints + lessThanHourLongShiftPenalty # 10 is too conservative, 0 not conservative enough
+        # We added the numberOfZeroes to the cost function for the following reason.
+        # Assume you are a candidate solution with many 1's. Then, your P(COL AVAIL SCHED) is high
+        # because the more 1's you have in your SCHED the more likely you will have a collision. 
+        # As such, your cost function will be higher. However, now we have a new term, numberOfZeroes.
+        # This term, will add a small amount to candidate solutions with many 1's, but will add a dramatically
+        # larger amount to candidate solutions with fewers 1's (and therefore many zeroes). Thus, adding this
+        # to the cost function dramatically improves the relative fitness of candidate solutions with many 1's
+        # COMPARED to to candidate solutions with many zeroes.
+        return (sumHardConstraints  + numberOfZeroes)   # 10 is too conservative, 0 not conservative enough
 
     # Function takes each nurse's schedule in valueset of scheduleDict and compares to the nurse's availability string
     # and counts the total number of times a nurse is scheduled when she is unavailable
