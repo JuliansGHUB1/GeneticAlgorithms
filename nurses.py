@@ -68,7 +68,7 @@ class NurseSchedulingProblem:
         # larger amount to candidate solutions with fewers 1's (and therefore many zeroes). Thus, adding this
         # to the cost function dramatically improves the relative fitness of candidate solutions with many 1's
         # COMPARED to to candidate solutions with many zeroes.
-        return (sumHardConstraints  + numberOfZeroes)   # 10 is too conservative, 0 not conservative enough
+        return (sumHardConstraints  + 2 * numberOfZeroes)   # 10 is too conservative, 0 not conservative enough
 
     # Function takes each nurse's schedule in valueset of scheduleDict and compares to the nurse's availability string
     # and counts the total number of times a nurse is scheduled when she is unavailable
